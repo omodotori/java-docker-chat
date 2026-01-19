@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0"
+    />
+    <title>Spring Boot WebSocket Chat Application</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        box-sizing: border-box;
+      }
+      #username-page,
+      #chat-page {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+      .hidden {
+        display: none !important;
+      }
+      input {
+        padding: 10px;
+        margin: 5px;
+      }
+      button {
+        padding: 10px 20px;
+        cursor: pointer;
+      }
+      #messageArea {
+        list-style: none;
+        padding: 0;
+        width: 80%;
+        max-width: 600px;
+        height: 300px;
+        overflow-y: scroll;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+      }
+      #messageArea li {
+        padding: 5px 10px;
+        border-bottom: 1px solid #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="username-page">
+      <h2>Type your username</h2>
+      <input type="text" id="name" placeholder="Username" autocomplete="off" />
+      <button onclick="connect()">Connect</button>
+    </div>
+
+    <div id="chat-page" class="hidden">
+      <h2>Chat Room</h2>
+      <ul id="messageArea"></ul>
+      <form id="messageForm" name="messageForm" onsubmit="sendMessage(event)">
+        <input
+          type="text"
+          id="message"
+          placeholder="Type a message..."
+          autocomplete="off"
+        />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+    <script>
+      var stompClient = null;
+      var username = null;
+
+      function connect() {
+        username = document.querySelector("#name").value.trim();
+        if (username) {
+          document.querySelector("#username-page").classList.add("hidden");
+          document.querySelector("#chat-page").classList.remove("hidden");
+
+          var socket = new SockJS("/ws");
+          stompClient = Stomp.over(socket);
+          stompClient.connect({}, onConnected, onError);
+        }
+      }
+
+      function onConnected() {
+        stompClient.subscribe("/topic/public", onMessageReceived);
+        stompClient.send(
+          "/app/chat.addUser",
+          {},
+          JSON.stringify({ sender: username, type: "JOIN" }),
+        );
+      }
+
+      function onError(error) {
+        console.log("Could not connect to WebSocket server. " + error);
+      }
+
+      function sendMessage(event) {
+        var messageContent = document.querySelector("#message").value.trim();
+        if (messageContent && stompClient) {
+          var chatMessage = {
+            sender: username,
+            content: messageContent,
+            type: "CHAT",
+          };
+          stompClient.send(
+            "/app/chat.sendMessage",
+            {},
+            JSON.stringify(chatMessage),
+          );
+          document.querySelector("#message").value = "";
+        }
+        event.preventDefault();
+      }
+
+      function onMessageReceived(payload) {
+        var message = JSON.parse(payload.body);
+        var messageElement = document.createElement("li");
+
+        if (message.type === "JOIN") {
+          messageElement.classList.add("event-message");
+          message.content = message.sender + " joined!";
+        } else if (message.type === "LEAVE") {
+          messageElement.classList.add("event-message");
+          message.content = message.sender + " left!";
+        } else {
+          messageElement.classList.add("chat-message");
+          var usernameElement = document.createElement("span");
+          var usernameText = document.createTextNode(message.sender + ": ");
+          usernameElement.appendChild(usernameText);
+          messageElement.appendChild(usernameElement);
+        }
+
+        var textElement = document.createElement("span");
+        var messageText = document.createTextNode(message.content);
+        textElement.appendChild(messageText);
+
+        messageElement.appendChild(textElement);
+        document.querySelector("#messageArea").appendChild(messageElement);
+      }
+    </script>
+  </body>
+</html>
