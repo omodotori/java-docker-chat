@@ -13,6 +13,8 @@ public class ChatController {
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
     public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
+        String time = new java.text.SimpleDateFormat("HH:mm").format(new java.util.Date());
+        chatMessage.setTime(time);
         return chatMessage;
     }
 

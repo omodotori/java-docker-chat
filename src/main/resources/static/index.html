@@ -5,91 +5,204 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0"
     />
-    <title>Spring Boot WebSocket Chat Application</title>
+    <title>Chat App</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
       body {
-        margin: 0;
-        padding: 0;
-        font-family: sans-serif;
-        box-sizing: border-box;
-      }
-      #username-page,
-      #chat-page {
-        width: 100%;
-        height: 100%;
+        background-color: #f0f2f5;
+        height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+      .chat-container {
+        max-width: 800px;
+        width: 100%;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        height: 80vh;
+        display: flex;
         flex-direction: column;
+      }
+      .chat-header {
+        background: #0d6efd;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-weight: bold;
+      }
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: #e9eff5;
+      }
+      .message-item {
+        display: flex;
+        flex-direction: column;
+        max-width: 70%;
+      }
+      .message-item.self {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
+      .message-item.other {
+        align-self: flex-start;
+        align-items: flex-start;
+      }
+      .message-bubble {
+        padding: 10px 15px;
+        border-radius: 15px;
+        position: relative;
+        word-wrap: break-word;
+      }
+      .self .message-bubble {
+        background: #0d6efd;
+        color: white;
+        border-bottom-right-radius: 2px;
+      }
+      .other .message-bubble {
+        background: white;
+        color: #333;
+        border-bottom-left-radius: 2px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      .message-info {
+        font-size: 0.75rem;
+        margin-top: 4px;
+        color: #666;
+      }
+      .self .message-info {
+        text-align: right;
+      }
+      .event-message {
+        text-align: center;
+        color: #888;
+        font-size: 0.85rem;
+        margin: 10px 0;
+      }
+      .chat-input-area {
+        padding: 15px;
+        background: white;
+        border-top: 1px solid #eee;
+      }
+      .username-page {
+        text-align: center;
+        padding: 40px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       }
       .hidden {
         display: none !important;
       }
-      input {
-        padding: 10px;
-        margin: 5px;
-      }
-      button {
-        padding: 10px 20px;
-        cursor: pointer;
-      }
-      #messageArea {
-        list-style: none;
-        padding: 0;
-        width: 80%;
-        max-width: 600px;
-        height: 300px;
-        overflow-y: scroll;
-        border: 1px solid #ccc;
-        margin-bottom: 10px;
-      }
-      #messageArea li {
-        padding: 5px 10px;
-        border-bottom: 1px solid #eee;
+      .avatar-circle {
+        width: 30px;
+        height: 30px;
+        background-color: #ddd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #555;
+        margin-right: 8px;
+        margin-bottom: 4px;
       }
     </style>
   </head>
   <body>
-    <div id="username-page">
-      <h2>Type your username</h2>
-      <input type="text" id="name" placeholder="Username" autocomplete="off" />
-      <button onclick="connect()">Connect</button>
+    <!-- Login Page -->
+    <div id="username-page" class="container">
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+          <div class="username-page">
+            <h2 class="mb-4">Join Chat</h2>
+            <form id="usernameForm" name="usernameForm">
+              <div class="mb-3">
+                <input
+                  type="text"
+                  id="name"
+                  class="form-control form-control-lg"
+                  placeholder="Enter your username"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg w-100">
+                Start Chatting
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div id="chat-page" class="hidden">
-      <h2>Chat Room</h2>
-      <ul id="messageArea"></ul>
-      <form id="messageForm" name="messageForm" onsubmit="sendMessage(event)">
-        <input
-          type="text"
-          id="message"
-          placeholder="Type a message..."
-          autocomplete="off"
-        />
-        <button type="submit">Send</button>
-      </form>
+    <!-- Chat Page -->
+    <div id="chat-page" class="chat-container hidden">
+      <div class="chat-header">Spring Boot Chat Room</div>
+      <div class="chat-messages" id="messageArea">
+        <!-- Messages will appear here -->
+      </div>
+      <div class="chat-input-area">
+        <form id="messageForm" name="messageForm" class="d-flex gap-2">
+          <input
+            type="text"
+            id="message"
+            class="form-control"
+            placeholder="Type a message..."
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+      </div>
     </div>
 
     <script>
       var stompClient = null;
       var username = null;
 
-      function connect() {
+      var colors = [
+        "#2196F3",
+        "#32c787",
+        "#00BCD4",
+        "#ff5652",
+        "#ffc107",
+        "#ff85af",
+        "#FF9800",
+        "#39bbb0",
+      ];
+
+      function connect(event) {
         username = document.querySelector("#name").value.trim();
+
         if (username) {
           document.querySelector("#username-page").classList.add("hidden");
-          document.querySelector("#chat-page").classList.remove("hidden");
+          document.querySelector("#chat-page").classList.remove("hidden"); // Fix hidden removal
 
           var socket = new SockJS("/ws");
           stompClient = Stomp.over(socket);
+
           stompClient.connect({}, onConnected, onError);
         }
+        event.preventDefault();
       }
 
       function onConnected() {
+        // Subscribe to the Public Topic
         stompClient.subscribe("/topic/public", onMessageReceived);
+
+        // Tell your username to the server
         stompClient.send(
           "/app/chat.addUser",
           {},
@@ -121,29 +234,67 @@
 
       function onMessageReceived(payload) {
         var message = JSON.parse(payload.body);
-        var messageElement = document.createElement("li");
+        var messageArea = document.querySelector("#messageArea");
 
         if (message.type === "JOIN") {
-          messageElement.classList.add("event-message");
-          message.content = message.sender + " joined!";
+          var eventDiv = document.createElement("div");
+          eventDiv.classList.add("event-message");
+          eventDiv.textContent = message.sender + " joined!";
+          messageArea.appendChild(eventDiv);
         } else if (message.type === "LEAVE") {
-          messageElement.classList.add("event-message");
-          message.content = message.sender + " left!";
+          var eventDiv = document.createElement("div");
+          eventDiv.classList.add("event-message");
+          eventDiv.textContent = message.sender + " left!";
+          messageArea.appendChild(eventDiv);
         } else {
-          messageElement.classList.add("chat-message");
-          var usernameElement = document.createElement("span");
-          var usernameText = document.createTextNode(message.sender + ": ");
-          usernameElement.appendChild(usernameText);
-          messageElement.appendChild(usernameElement);
+          var messageItem = document.createElement("div");
+          messageItem.classList.add("message-item");
+
+          var isSelf = message.sender === username;
+          messageItem.classList.add(isSelf ? "self" : "other");
+
+          var bubble = document.createElement("div");
+          bubble.classList.add("message-bubble");
+
+          if (!isSelf) {
+            // Add sender name for others
+            var senderName = document.createElement("div");
+            senderName.style.fontSize = "0.7em";
+            senderName.style.fontWeight = "bold";
+            senderName.style.marginBottom = "2px";
+            senderName.textContent = message.sender;
+            bubble.appendChild(senderName);
+          }
+
+          var textSpan = document.createElement("span");
+          textSpan.textContent = message.content;
+          bubble.appendChild(textSpan);
+
+          var infoDiv = document.createElement("div");
+          infoDiv.classList.add("message-info");
+          // Use server time or current time fallback
+          var time =
+            message.time ||
+            new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          infoDiv.textContent = time;
+
+          messageItem.appendChild(bubble);
+          messageItem.appendChild(infoDiv);
+
+          messageArea.appendChild(messageItem);
         }
-
-        var textElement = document.createElement("span");
-        var messageText = document.createTextNode(message.content);
-        textElement.appendChild(messageText);
-
-        messageElement.appendChild(textElement);
-        document.querySelector("#messageArea").appendChild(messageElement);
+        messageArea.scrollTop = messageArea.scrollHeight;
       }
+
+      document
+        .querySelector("#usernameForm")
+        .addEventListener("submit", connect, true);
+      document
+        .querySelector("#messageForm")
+        .addEventListener("submit", sendMessage, true);
     </script>
   </body>
 </html>
