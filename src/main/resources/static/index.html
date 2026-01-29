@@ -12,6 +12,7 @@
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    
     <style>
       body {
         background-color: #f0f2f5;
@@ -148,7 +149,6 @@
       </div>
     </div>
 
-    <!-- Chat Page -->
     <div id="chat-page" class="chat-container hidden">
       <div class="chat-header">Spring Boot Chat Room</div>
       <div class="chat-messages" id="messageArea">
@@ -199,10 +199,8 @@
       }
 
       function onConnected() {
-        // Subscribe to the Public Topic
         stompClient.subscribe("/topic/public", onMessageReceived);
 
-        // Tell your username to the server
         stompClient.send(
           "/app/chat.addUser",
           {},
@@ -257,7 +255,6 @@
           bubble.classList.add("message-bubble");
 
           if (!isSelf) {
-            // Add sender name for others
             var senderName = document.createElement("div");
             senderName.style.fontSize = "0.7em";
             senderName.style.fontWeight = "bold";
@@ -272,14 +269,30 @@
 
           var infoDiv = document.createElement("div");
           infoDiv.classList.add("message-info");
-          // Use server time or current time fallback
-          var time =
-            message.time ||
-            new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-          infoDiv.textContent = time;
+          var timeStr = "";
+          if (message.time) {
+            if (/^\d{1,2}:\d{2}$/.test(message.time)) {
+              timeStr = message.time;
+            } else {
+              try {
+                var timeRaw = message.time;
+                if (typeof timeRaw === 'string' && !timeRaw.endsWith('Z') && !/[+-]\d\d:\d\d$/.test(timeRaw)) {
+                  timeRaw += 'Z';
+                }
+                var date = new Date(timeRaw);
+                if (!isNaN(date.getTime())) {
+                  timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                } else {
+                  timeStr = message.time;
+                }
+              } catch (e) {
+                timeStr = message.time;
+              }
+            }
+          } else {
+            timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          }
+          infoDiv.textContent = timeStr;
 
           messageItem.appendChild(bubble);
           messageItem.appendChild(infoDiv);

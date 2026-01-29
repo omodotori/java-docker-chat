@@ -1,56 +1,44 @@
 package com.example.chat.model;
 
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "chat_messages")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatMessage {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Enumerated(EnumType.STRING)
     private MessageType type;
+
     private String content;
     private String sender;
-    private String time;
+
+    @Column(name = "timestamp", nullable = false)
+    private LocalDateTime timestamp;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.timestamp == null) {
+            this.timestamp = LocalDateTime.now();
+        }
+    }
 
     public enum MessageType {
         CHAT,
         JOIN,
         LEAVE
-    }
-
-    public ChatMessage() {
-    }
-
-    public ChatMessage(MessageType type, String content, String sender, String time) {
-        this.type = type;
-        this.content = content;
-        this.sender = sender;
-        this.time = time;
-    }
-
-    public MessageType getType() {
-        return type;
-    }
-
-    public void setType(MessageType type) {
-        this.type = type;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public String getSender() {
-        return sender;
-    }
-
-    public void setSender(String sender) {
-        this.sender = sender;
-    }
-
-    public String getTime() {
-        return time;
-    }
-
-    public void setTime(String time) {
-        this.time = time;
     }
 }
